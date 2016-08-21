@@ -7,9 +7,13 @@ public final class Lock {
     /**
      Creates a pthread_mutex using the default attributes.
      */
-    public init() {
+    public init() throws {
         // default attributes
-        pthread_mutex_init(&mutex, nil)
+        let result = pthread_mutex_init(&mutex, nil)
+
+        guard result == 0 else {
+            throw SystemError(errorNumber: result)!
+        }
     }
 
     deinit {
@@ -22,8 +26,8 @@ public final class Lock {
      - note: If lock is already acquired, suspends execution until
      lock is released.
      */
-    public func acquire(_ closure: () -> ()) {
-        acquire()
+    public func acquire(_ closure: @noescape () -> ()) throws {
+        try acquire()
         closure()
         release()
     }
@@ -39,8 +43,8 @@ public final class Lock {
 
      - returns: Returns the result of the closure
      */
-    public func acquire<T>(_ closure: () -> (T)) -> T {
-        acquire()
+    public func acquire<T>(_ closure: @noescape () -> (T)) throws -> T {
+        try acquire()
         let result = closure()
         release()
         return result
@@ -52,15 +56,18 @@ public final class Lock {
      - note: If lock is acquired by a different thread, current thread's execution
      is suspended until the lock is released.
      */
-    public func acquire() {
-        // TODO: error handling
-        pthread_mutex_lock(&mutex)
+    public func acquire() throws {
+        let result = pthread_mutex_lock(&mutex)
+
+        guard result == 0 else {
+            throw SystemError(errorNumber: result)!
+        }
     }
 
     /**
      Releases the lock.
 
-     - note: Behavior when releasing an unacquired lock is undefined.
+     - precondition: Lock is alreay acquired. Behavior is undefined otherwise.
      */
     public func release() {
         pthread_mutex_unlock(&mutex)
@@ -74,6 +81,8 @@ public final class Lock {
      - precondition: Lock is already acquired. Behavior is undefined otherwise.
      */
     public func wait(for condition: Condition) {
+        // TODO: handle spurious wakeups (can't find good documentation
+        // for how to do this)
         pthread_cond_wait(&condition.condition, &mutex)
     }
 }

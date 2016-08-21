@@ -1,5 +1,10 @@
 import POSIX
 
+public enum ThreadError: ErrorProtocol {
+    case notEnoughResources
+    case invalidReturnValue
+}
+
 /// A wrapper for the POSIX pthread_t type.
 public final class Thread<T> {
 
@@ -21,7 +26,7 @@ public final class Thread<T> {
      - remarks: The routine can return `Void`, which is useful when there is need
      for a result.
      */
-    public init(keepAlive: Bool = true, routine: () -> (T)) {
+    public init(keepAlive: Bool = true, routine: () throws -> (T)) throws {
 
         let context = ThreadContext(routine: routine)
 
@@ -40,8 +45,8 @@ public final class Thread<T> {
             encode(context)
         )
 
-        guard result == 0 else {
-            fatalError("failed with error number \(result)")
+        if result == EAGAIN {
+            throw ThreadError.notEnoughResources
         }
 
         #if os(Linux)
@@ -49,6 +54,7 @@ public final class Thread<T> {
         #else
         self.thread = pthreadPointer.pointee!
         #endif
+
         self.context = context
         self.keepAlive = keepAlive
     }
@@ -56,7 +62,7 @@ public final class Thread<T> {
     deinit {
         pthread_detach(thread)
         if !keepAlive {
-            pthread_cancel(thread)
+            cancel()
         }
     }
 
@@ -65,16 +71,20 @@ public final class Thread<T> {
 
      - returns: Returns the result of the routine.
      */
-    public func join() -> T {
-        var result: UnsafeMutablePointer<Void>?
-        pthread_join(thread, &result)
+    public func join() throws -> T {
+        var _out: UnsafeMutablePointer<Void>?
+        pthread_join(thread, &_out)
 
-        //TODO: proper error handling (stuff can fail)
-        guard result != nil else {
-            fatalError("join did not return a result")
+        guard let out = _out else {
+            throw ThreadError.invalidReturnValue
         }
 
-        return decode(result!)
+        let result: Result<T> = decode(out)
+
+        switch result {
+        case .success(let t): return t
+        case .failure(let e): throw e
+        }
     }
 
     /**
@@ -85,25 +95,39 @@ public final class Thread<T> {
     }
 }
 
+private enum Result<T> {
+    case success(T)
+    case failure(ErrorProtocol)
+
+    init(of routine: () throws -> T) {
+        do {
+            self = try .success(routine())
+        } catch {
+            self = .failure(error)
+        }
+    }
+}
+
 private final class ThreadContext {
     var done = false
     let routine: () -> UnsafeMutablePointer<Void>?
-    init<T>(routine: () -> T) {
+    init<T>(routine: () throws -> T) {
         self.routine = {
-            let result = routine()
-            return encode(result)
+            return encode(Result(of: routine))
         }
     }
 }
 
 private final class Box<T> {
     let value: T
+
     init(_ value: T) {
         self.value = value
     }
 }
 
 private func decode<T>(_ memory: UnsafeMutablePointer<Void>) -> T {
+    // TODO: find a way to handle errors here
     let unmanaged = Unmanaged<Box<T>>.fromOpaque(OpaquePointer(memory))
     defer { unmanaged.release() }
     return unmanaged.takeUnretainedValue().value

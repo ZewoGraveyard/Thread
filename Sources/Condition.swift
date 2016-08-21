@@ -7,9 +7,13 @@ public final class Condition {
     /**
      Creates a condition using the default attributes
      */
-    public init() {
+    public init() throws {
         // TOOD: Don't use default attributes
-        pthread_cond_init(&condition, nil)
+        let result = pthread_cond_init(&condition, nil)
+
+        guard result == 0 else {
+            throw SystemError(errorNumber: result)!
+        }
     }
 
     deinit {

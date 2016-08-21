@@ -3,11 +3,11 @@ import Foundation
 @testable import Thread
 
 class ThreadTests: XCTestCase {
-    func testExecution() {
+    func testExecution() throws {
         let arr = [1,2,3,4,5]
         var sum: Int?
 
-        _ = Thread {
+        _ = try Thread {
             sum = arr.reduce(0, combine: +)
         }
 
@@ -16,11 +16,11 @@ class ThreadTests: XCTestCase {
         XCTAssertEqual(sum, 15)
     }
 
-    func testDone() {
+    func testDone() throws {
         let arr = [1,2,3,4,5]
         var sum: Int?
 
-        let thread = Thread {
+        let thread = try Thread {
             sum = arr.reduce(0, combine: +)
         }
 
@@ -34,15 +34,33 @@ class ThreadTests: XCTestCase {
         XCTAssertEqual(sum, 15)
     }
 
-    func testJoin() {
+    func testJoin() throws {
         let arr = [1,2,3,4,5]
 
-        let sum = Thread {
+        let sum = try Thread {
             return arr.reduce(0, combine: +)
         }.join()
 
         XCTAssertEqual(sum, 15)
     }
+
+    struct TestError: ErrorProtocol {}
+    func testCatchesErrors() {
+        let result = try? Thread<Int> {
+            throw TestError()
+        }.join()
+
+        XCTAssertNil(result)
+    }
+
+    // A reminder of the inherent unsafety of using c
+    // apis (crashes due to type mismatch)
+    //func testGracefullyExits() throws {
+    //    _ = try Thread<String> {
+    //        var value = 10
+    //        pthread_exit(&value)
+    //    }.join()
+    //}
 }
 
 extension ThreadTests {
@@ -50,7 +68,8 @@ extension ThreadTests {
         return [
             ("testExecution", testExecution),
             ("testDone", testDone),
-            ("testJoin", testJoin)
+            ("testJoin", testJoin),
+            ("testCatchesErrors", testCatchesErrors)
         ]
     }
 }

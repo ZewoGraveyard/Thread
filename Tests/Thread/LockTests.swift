@@ -3,17 +3,17 @@ import Foundation
 @testable import Thread
 
 class LockTests: XCTestCase {
-    func testWaitsForCondition() {
+    func testWaitsForCondition() throws {
         let start = NSDate().timeIntervalSince1970
 
-        let condition = Condition()
-        let lock = Lock()
-        _ = Thread<Void> {
+        let condition = try Condition()
+        let lock = try Lock()
+        _ = try Thread {
             sleep(1)
             condition.resolve()
         }
 
-        lock.acquire {
+        try lock.acquire {
             lock.wait(for: condition)
         }
 
@@ -21,22 +21,22 @@ class LockTests: XCTestCase {
         XCTAssertGreaterThan(duration, 1)
     }
 
-    func testLockEnsuresThreadSafety() {
+    func testLockEnsuresThreadSafety() throws {
         // if it doesnt crash, it succeeds
 
-        let lock = Lock()
+        let lock = try Lock()
         var results = [Int]()
 
-        _ = Thread {
+        _ = try Thread {
             for i in 1...10000 {
-                lock.acquire {
+                try lock.acquire {
                     results.append(i)
                 }
             }
         }
-        _ = Thread {
+        _ = try Thread {
             for i in 1...10000 {
-                lock.acquire {
+                try lock.acquire {
                     results.append(i)
                 }
             }
