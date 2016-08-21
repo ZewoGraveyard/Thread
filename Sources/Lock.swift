@@ -2,63 +2,78 @@ import POSIX
 
 /// A wrapper for the POSIX pthread_mutex_t type.
 public final class Lock {
-    internal let mutex = UnsafeMutablePointer<pthread_mutex_t>(allocatingCapacity: 1)
+    internal var mutex = pthread_mutex_t()
 
     /**
      Creates a pthread_mutex using the default attributes.
      */
     public init() {
         // default attributes
-        pthread_mutex_init(mutex, nil)
+        pthread_mutex_init(&mutex, nil)
     }
 
     deinit {
-        mutex.deallocateCapacity(1)
+        pthread_mutex_destroy(&mutex)
     }
 
     /**
-     Acquires the lock for the duration of the closure.
+     Acquires the lock for the duration of the closure. Releases afterwards.
+
+     - note: If lock is already acquired, suspends execution until
+     lock is released.
      */
     public func acquire(_ closure: () -> ()) {
-        lock()
+        acquire()
         closure()
-        unlock()
+        release()
     }
 
     /**
-     Acquires the lock for the duration of the closure.
+     Acquires the lock for the duration of the closure. Releases afterwards.
 
-     - parameter closure: A closure returning a value of type T.
+     - note: If lock is already acquired, suspends execution until
+     lock is released.
+
+     - parameter closure: A closure returning a value of type T. Executed after
+     the lock has been acquired.
 
      - returns: Returns the result of the closure
      */
     public func acquire<T>(_ closure: () -> (T)) -> T {
-        lock()
+        acquire()
         let result = closure()
-        unlock()
+        release()
         return result
     }
 
     /**
-     Locks the lock
+     Acquires the lock.
+
+     - note: If lock is acquired by a different thread, current thread's execution
+     is suspended until the lock is released.
      */
-    public func lock() {
-        pthread_mutex_lock(mutex)
+    public func acquire() {
+        // TODO: error handling
+        pthread_mutex_lock(&mutex)
     }
 
     /**
-     Unlocks the lock
+     Releases the lock.
+
+     - note: Behavior when releasing an unacquired lock is undefined.
      */
-    public func unlock() {
-        pthread_mutex_unlock(mutex)
+    public func release() {
+        pthread_mutex_unlock(&mutex)
     }
 
     /**
-     Blocks until the condition has been resolved.
+     Suspends execution until the condition has been resolved.
 
-     - note: Unlocks the lock while waiting, re-locks afterwards.
+     - note: Releases the lock while waiting, re-acquires afterwards.
+
+     - precondition: Lock is already acquired. Behavior is undefined otherwise.
      */
     public func wait(for condition: Condition) {
-        pthread_cond_wait(condition.condition, mutex)
+        pthread_cond_wait(&condition.condition, &mutex)
     }
 }
