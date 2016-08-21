@@ -25,8 +25,13 @@ public final class Thread<T> {
 
         let context = ThreadContext(routine: routine)
 
+        #if os(Linux)
+        let pthreadPointer = UnsafeMutablePointer<pthread_t>(allocatingCapacity: 1)
+        defer { pthreadPointer.deallocateCapacity(1) }
+        #else
         let pthreadPointer = UnsafeMutablePointer<pthread_t?>(allocatingCapacity: 1)
         defer { pthreadPointer.deallocateCapacity(1) }
+        #endif
 
         let result = pthread_create(
             pthreadPointer,
@@ -39,7 +44,11 @@ public final class Thread<T> {
             fatalError("failed with error number \(result)")
         }
 
+        #if os(Linux)
+        self.thread = pthreadPointer.pointee
+        #else
         self.thread = pthreadPointer.pointee!
+        #endif
         self.context = context
         self.keepAlive = keepAlive
     }
