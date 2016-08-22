@@ -21,7 +21,7 @@ public final class Thread<T> {
      - parameter keepAlive: A boolean determining whether the thread execution should
      be canceled upon deinitialization of the created instance. Defaults to true.
 
-     - parameter routine: A closure which is executed on a new thread.
+     - parameter routine: A closure which is executed on a new thread. Errors thrown in the routine are thrown in the `join` method.
 
      - remarks: The routine can return `Void`, which is useful when there is need
      for a result.
