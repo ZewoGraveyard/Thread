@@ -8,6 +8,7 @@ class LockTests: XCTestCase {
 
         let condition = try Condition()
         let lock = try Lock()
+
         _ = try Thread {
             sleep(1)
             condition.resolve()
