@@ -25,23 +25,14 @@ public final class Lock {
 
      - note: If lock is already acquired, suspends execution until
      lock is released.
-     */
-    public func acquire(_ closure: @noescape () -> ()) throws {
-        try acquire()
-        closure()
-        release()
-    }
-
-    /**
-     Acquires the lock for the duration of the closure. Releases afterwards.
-
-     - note: If lock is already acquired, suspends execution until
-     lock is released.
 
      - parameter closure: A closure returning a value of type T. Executed after
      the lock has been acquired.
 
      - returns: Returns the result of the closure
+
+     - remarks: The closure can return `Void`, which is useful when there is need
+     for a result.
      */
     public func acquire<T>(_ closure: @noescape () -> (T)) throws -> T {
         try acquire()
