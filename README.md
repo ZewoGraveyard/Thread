@@ -38,31 +38,30 @@ The closure passed to the `Thread` initializer is immediately executed on a new 
 
 ```swift
 let thread = try Thread<Int> {
-     return [1,2,3,4,5].reduce(0, combine: +)
+     return [1, 2, 3, 4, 5].reduce(0, combine: +)
 }
-let sum = try thread.join() // 15
+let sum = try thread.wait() // 15
 ```
 
-The `join` method suspends the execution of the current thread until the called thread exits. It then returns the result of the routine given to the thread.
+The `wait` method suspends the execution of the current thread until the called thread exits. It then returns the result of the routine given to the thread.
 
-> **WARNING**: Manual calls to `pthread_exit` are almost guaranteed to crash your application upon the `join` method call, **unless** the parameter value is nil.
+> **WARNING**: Manual calls to `pthread_exit` with a non-nil parameter are almost guaranteed to crash your application.
 
 ### Using a lock
 
-A lock is a simple concurrency primitive which can be used to achieve threadsafety.
+A lock is a simple concurrency primitive which can be used to achieve thread-safety.
+
+The lock can be locked with `acquire` and unlocked with `release`. The `withLock` method acquires the lock for the duration of the passed in closure.
 
 ```swift
 let lock = try Lock()
 var shared = 0
-try Thread {
-    lock.acquire()
-    shared += 1
-    lock.release()
-}
-try Thread {
-    lock.acquire {
-        shared += 1
-    }
+for _ in 1...1000 {
+  try Thread {
+      try lock.withLock {
+          shared += 1
+      }
+  }
 }
 ```
 
@@ -77,7 +76,7 @@ try Thread {
     sleep(1)
     delay.resolve()
 }
-try lock.acquire {
+try lock.withLock {
     lock.wait(for: delay)
 }
 ```

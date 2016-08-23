@@ -14,7 +14,7 @@ class LockTests: XCTestCase {
             condition.resolve()
         }
 
-        try lock.acquire {
+        try lock.withLock {
             lock.wait(for: condition)
         }
 
@@ -30,14 +30,14 @@ class LockTests: XCTestCase {
 
         _ = try Thread {
             for i in 1...10000 {
-                try lock.acquire {
+                try lock.withLock {
                     results.append(i)
                 }
             }
         }
         _ = try Thread {
             for i in 1...10000 {
-                try lock.acquire {
+                try lock.withLock {
                     results.append(i)
                 }
             }

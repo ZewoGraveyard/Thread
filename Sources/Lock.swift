@@ -21,10 +21,8 @@ public final class Lock {
     }
 
     /**
-     Acquires the lock for the duration of the closure. Releases afterwards.
-
-     - note: If lock is already acquired, suspends execution until
-     lock is released.
+     Acquires the lock for the duration of the closure. Releases afterwards. If
+     lock is already acquired elsewhere, suspends execution until lock is released.
 
      - parameter closure: A closure returning a value of type T. Executed after
      the lock has been acquired.
@@ -33,12 +31,13 @@ public final class Lock {
 
      - remarks: The closure can return `Void`, which is useful when there is need
      for a result.
+
+     - note: If the closure throws an error, the lock is released befored returning.
      */
-    public func acquire<T>(_ closure: @noescape () -> (T)) throws -> T {
+    public func withLock<T>(_ closure: @noescape () throws -> (T)) throws -> T {
         try acquire()
-        let result = closure()
-        release()
-        return result
+        defer { release() }
+        return try closure()
     }
 
     /**

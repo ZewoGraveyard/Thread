@@ -62,7 +62,7 @@ public final class Thread<T> {
     deinit {
         pthread_detach(thread)
         if !keepAlive {
-            cancel()
+            abort()
         }
     }
 
@@ -71,7 +71,7 @@ public final class Thread<T> {
 
      - returns: Returns the result of the routine.
      */
-    public func join() throws -> T {
+    public func wait() throws -> T {
         var _out: UnsafeMutablePointer<Void>?
         pthread_join(thread, &_out)
 
@@ -88,9 +88,11 @@ public final class Thread<T> {
     }
 
     /**
-     Cancels the execution of the thread.
+     Stops the execution of the thread.
+
+     - note: Cancelling only takes place after the cleanup (asynchronous) has finished.
      */
-    public func cancel() {
+    public func abort() {
         pthread_cancel(thread)
     }
 }

@@ -39,7 +39,7 @@ class ThreadTests: XCTestCase {
 
         let sum = try Thread {
             return arr.reduce(0, combine: +)
-        }.join()
+        }.wait()
 
         XCTAssertEqual(sum, 15)
     }
@@ -48,7 +48,7 @@ class ThreadTests: XCTestCase {
     func testCatchesErrors() {
         let result = try? Thread<Int> {
             throw TestError()
-        }.join()
+        }.wait()
 
         XCTAssertNil(result)
     }
